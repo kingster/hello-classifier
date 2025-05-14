@@ -25,8 +25,15 @@ public class App  {
         }
         Path vocabPath = Paths.get(vocabURL.toURI());
 
+        URL tokenizerURL = App.class.getClassLoader().getResource("intent_model_onnx/tokenizer.json");
+        if (tokenizerURL == null) {
+            throw new RuntimeException("Could not find tokenizer.json in resources");
+        }
+        Path tokenizerPath = Paths.get(tokenizerURL.toURI());
+
         // Instantiate the embedding engine
-        IntentClassifier engine = new IntentClassifier(modelPath, vocabPath);
+        IntentClassifier engine1 = new IntentClassifier(modelPath, vocabPath);
+        HuggingFaceIntentClassifier engine2 = new HuggingFaceIntentClassifier(modelPath, tokenizerPath);
 
         // Test some examples
         String[] testPhrases = {
@@ -41,9 +48,12 @@ public class App  {
         };
 
         for (String phrase : testPhrases) {
-            String intent = engine.classify(phrase);
-            System.out.println("Text: " + phrase);
-            System.out.println("Predicted Intent: " + intent + "\n");
+            String intent1 = engine1.classify(phrase);
+            String intent2 = engine2.classify(phrase);
+            System.out.println("\nText: " + phrase);
+            System.out.println("Predicted Intent: " + intent1 );
+            System.out.println("Predicted Intent: " + intent2 );
+
         }
     }
 }

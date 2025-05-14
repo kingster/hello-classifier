@@ -2,11 +2,10 @@ package org.github.kingster;
 
 import ai.djl.Application;
 import ai.djl.MalformedModelException;
+import ai.djl.huggingface.tokenizers.Encoding;
+import ai.djl.huggingface.tokenizers.HuggingFaceTokenizer;
 import ai.djl.inference.Predictor;
 import ai.djl.modality.Classifications;
-import ai.djl.modality.nlp.DefaultVocabulary;
-import ai.djl.modality.nlp.Vocabulary;
-import ai.djl.modality.nlp.bert.BertFullTokenizer;
 import ai.djl.ndarray.NDArray;
 import ai.djl.ndarray.NDList;
 import ai.djl.repository.zoo.Criteria;
@@ -20,13 +19,11 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 
-public class IntentClassifier {
+public class HuggingFaceIntentClassifier {
 
-    private static final Logger logger = LoggerFactory.getLogger(IntentClassifier.class);
+    private static final Logger logger = LoggerFactory.getLogger(HuggingFaceIntentClassifier.class);
 
     // Define your intent labels in the same order as they were trained
     private static final List<String> labels = Arrays.asList(
@@ -40,17 +37,9 @@ public class IntentClassifier {
 
     private final Predictor<String, Classifications> predictor;
 
-    public IntentClassifier(Path modelPath, Path vocabPath) throws MalformedModelException, IOException, ModelNotFoundException {
+    public HuggingFaceIntentClassifier(Path modelPath, Path tokenizerPath) throws MalformedModelException, IOException, ModelNotFoundException {
 
-        // Load the vocabulary
-        Vocabulary vocab = DefaultVocabulary.builder()
-                .optMinFrequency(1)
-                .addFromTextFile(vocabPath)
-                .optUnknownToken("[UNK]")
-                .build();
-
-        // Instantiate a simple BERT tokenizer
-        BertFullTokenizer tokenizer = new BertFullTokenizer(vocab, true);
+        HuggingFaceTokenizer tokenizer = HuggingFaceTokenizer.newInstance(tokenizerPath, Collections.singletonMap("padding", "false"));
 
         // Build Criteria with our custom translator
         Criteria<String, Classifications> criteria = Criteria.builder()
@@ -87,26 +76,27 @@ public class IntentClassifier {
      * Custom translator that tokenizes the text and gets the classification
      */
     private static class BertEmbedTranslator implements Translator<String, Classifications> {
-        private final BertFullTokenizer tokenizer;
-        private final Vocabulary vocab;
+        private final HuggingFaceTokenizer tokenizer;
         private final int maxSeqLength;
 
-        public BertEmbedTranslator(BertFullTokenizer tokenizer, int maxSequenceLength) {
+        public BertEmbedTranslator(HuggingFaceTokenizer tokenizer, int maxSequenceLength) {
             this.tokenizer = tokenizer;
-            this.vocab = tokenizer.getVocabulary();
             this.maxSeqLength = maxSequenceLength;
+        }
+
+        private String toText(List<String> tokens) {
+            String text = this.tokenizer.buildSentence(tokens);
+            List<String> tokenized = this.tokenizer.tokenize(text);
+            List<String> tokenizedWithoutSpecialTokens = new LinkedList(tokenized);
+            tokenizedWithoutSpecialTokens.remove(0);
+            tokenizedWithoutSpecialTokens.remove(tokenizedWithoutSpecialTokens.size() - 1);
+            return tokenizedWithoutSpecialTokens.equals(tokens) ? text : String.join("", tokens);
         }
 
         @Override
         public NDList processInput(TranslatorContext ctx, String input) {
 
-            List<String> tokens = new ArrayList<>();
-            // BERT embedding convention "[CLS] Your Sentence [SEP]"
-            // Reference https://docs.djl.ai/master/docs/demos/jupyter/rank_classification_using_BERT_on_Amazon_Review.html
-            tokens.add("[CLS]");
-            tokens.addAll(tokenizer.tokenize(input));
-            tokens.add("[SEP]");
-
+            List<String> tokens = tokenizer.tokenize(input);
             logger.debug("tokens: {}", tokens);
 
             // Check for unknown tokens [UNK]
@@ -121,7 +111,8 @@ public class IntentClassifier {
             }
 
             // Convert tokens to IDs
-            long[] inputIds = tokens.stream().mapToLong(vocab::getIndex).toArray();
+            Encoding encoding = tokenizer.encode(this.toText(tokens), true, false);
+            long[] inputIds = encoding.getIds() ;
 
             long[] attentionMaskArr = new long[tokens.size()];
             Arrays.fill(attentionMaskArr, 1);
