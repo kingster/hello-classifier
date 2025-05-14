@@ -1,0 +1,43 @@
+text,intent
+hello,greet
+hi,greet
+good morning,greet
+hey,greet
+hey there,greet
+howdy,greet
+what's up,greet
+hiya,greet
+greetings,greet
+salutations,greet
+bye,goodbye
+see you later,goodbye
+take care,goodbye
+farewell,goodbye
+adios,goodbye
+catch you later,goodbye
+peace out,goodbye
+so long,goodbye
+until next time,goodbye
+thank you,thank_you
+thanks,thank_you
+appreciate it,thank_you
+grateful,thank_you
+much obliged,thank_you
+cheers,thank_you
+thanks a lot,thank_you
+thank you very much,thank_you
+I don't understand,others
+What do you mean?,others
+Can you explain that?,others
+I'm not sure what you're asking,others
+Could you rephrase that?,others
+That doesn't make sense,others
+I'm confused,others
+What are you talking about?,others
+I don't get it,others
+Can you be more specific?,others
+what is cryptex?,others
+what is intent store,others
+random gibberish shit,others
+lorem ipsum dolor sit amet,others
+what is the meaning of life?,others
