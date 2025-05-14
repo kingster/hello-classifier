@@ -1,0 +1,9 @@
+transformers
+transformers[torch]
+scikit-learn
+pandas
+torch
+joblib
+accelerate>=0.26.0
+optimum
+optimum[exporters,onnxruntime]
